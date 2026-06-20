@@ -6,6 +6,8 @@ ZIPや位置情報はアプリのサーバーへアップロードしません�
 
 > Activity MapはStravaとは提携していない非公式のツールです。
 
+公開版: [https://activity-map.pages.dev/](https://activity-map.pages.dev/)
+
 ## できること
 
 - StravaエクスポートZIPをブラウザへドラッグ＆ドロップ
@@ -74,6 +76,12 @@ npm run build
 - Root directory: `/`
 
 `dist/`だけで動作し、サーバー側の実行環境やデータベースは不要です。
+
+WranglerでCloudflareへログイン済みの環境では、次のコマンドで本番デプロイできます。
+
+```sh
+npm run pages:deploy
+```
 
 ## Import limits
 
