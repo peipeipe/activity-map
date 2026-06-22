@@ -12,7 +12,7 @@ type Mode = "routes" | "heat";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <main class="shell">
-    <header class="hero">
+    <header class="hero landing-only">
       <div>
         <p class="eyebrow">STRAVA ACTIVITY VIEWER</p>
         <h1>これまでの運動を、<br><span>ひとつの地図に。</span></h1>
@@ -24,12 +24,12 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       </div>
     </header>
 
-    <div class="privacy"><span aria-hidden="true">✓</span><div><strong>あなたの記録は外部へ送信されません</strong><small>ZIPの解析はすべてこのブラウザ内で行います。地図タイルの取得を除き、位置情報をサーバーへ送信しません。</small></div></div>
+    <div class="privacy landing-only"><span aria-hidden="true">✓</span><div><strong>あなたの記録は外部へ送信されません</strong><small>ZIPの解析はすべてこのブラウザ内で行います。地図タイルの取得を除き、位置情報をサーバーへ送信しません。</small></div></div>
 
-    <section class="guide" aria-labelledby="guide-title">
+    <section class="guide landing-only" aria-labelledby="guide-title">
       <div class="section-heading"><p>HOW TO USE</p><h2 id="guide-title">かんたん3ステップ</h2><span>最初にStravaへアーカイブを申請します。準備には数日かかる場合があります。</span></div>
       <ol class="steps">
-        <li><span class="step-number">1</span><div><strong>アーカイブを申請</strong><p><a href="https://www.strava.com/account" target="_blank" rel="noopener noreferrer">Stravaのアカウント設定</a>を開き、「アカウントのダウンロードまたは削除」からアーカイブをリクエストします。</p></div></li>
+        <li><span class="step-number">1</span><div><strong>アーカイブを申請</strong><p><a href="https://www.strava.com/account" target="_blank" rel="noopener noreferrer">Stravaにログイン</a>し、右上の自分のアイコンから「設定」→「My Account」→「アカウントをダウンロード」の順に進み、「始める」を選択します。</p></div></li>
         <li><span class="step-number">2</span><div><strong>メールが届くまで待つ</strong><p>準備が完了するとStravaからメールが届きます。メール内のリンクからZIPをダウンロードします。</p><small>通常、数日かかります</small></div></li>
         <li><span class="step-number">3</span><div><strong>ZIPを読み込む</strong><p>ダウンロードしたZIPを展開せず、そのまま下のボタンから選択します。</p></div></li>
       </ol>
@@ -78,7 +78,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       </div>
       <p class="tile-notice">地図表示時は、選択した地図提供者へタイル取得の通信が発生します。</p>
     </section>
-    <footer><strong>Activity Map</strong><span>Stravaとは提携していない非公式のツールです。</span></footer>
+    <footer class="landing-only"><strong>Activity Map</strong><span>Stravaとは提携していない非公式のツールです。</span></footer>
   </main>
 `;
 
@@ -88,6 +88,8 @@ let mode: Mode = "routes";
 let worker: Worker | null = null;
 let map: L.Map | null = null;
 let activityLayer: Layer | null = null;
+let selectedActivityId: number | null = null;
+const routeLayers = new Map<number, L.Polyline>();
 
 const input = element<HTMLInputElement>("zip-input");
 const dropZone = element<HTMLDivElement>("drop-zone");
@@ -96,6 +98,7 @@ const progress = element<HTMLProgressElement>("progress");
 const progressLabel = element<HTMLElement>("progress-label");
 const progressPercent = element<HTMLElement>("progress-percent");
 const errorBox = element<HTMLElement>("error");
+const activityList = element<HTMLDivElement>("activity-list");
 
 element("choose-button").addEventListener("click", () => input.click());
 input.addEventListener("change", () => input.files?.[0] && beginImport(input.files[0]));
@@ -107,6 +110,10 @@ dropZone.addEventListener("drop", (event) => {
   dropZone.classList.remove("dragging");
   const file = event.dataTransfer?.files[0];
   if (file) beginImport(file);
+});
+activityList.addEventListener("click", (event) => {
+  const item = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-activity-id]");
+  if (item) selectActivity(Number(item.dataset.activityId), false);
 });
 
 document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((button) => button.addEventListener("click", () => {
@@ -127,6 +134,8 @@ element("export-button").addEventListener("click", exportJson);
 element("clear-button").addEventListener("click", async () => {
   await clearActivities();
   activities = [];
+  selectedActivityId = null;
+  document.body.classList.remove("has-activities");
   element("workspace").hidden = true;
   element("import-card").hidden = false;
   input.value = "";
@@ -164,6 +173,7 @@ function handleWorkerMessage(message: WorkerMessage): void {
     progressPercent.textContent = `${Math.round((message.current / message.total) * 100)}%`;
   } else if (message.type === "complete") {
     activities = message.activities;
+    selectedActivityId = null;
     cancelWorker();
     progressArea.hidden = true;
     dropZone.hidden = false;
@@ -195,8 +205,9 @@ function showError(message: string): void {
 }
 
 function showWorkspace(): void {
+  document.body.classList.add("has-activities");
   element("workspace").hidden = false;
-  element("import-card").hidden = false;
+  element("import-card").hidden = true;
   initializeMap();
   render();
   requestAnimationFrame(() => map?.invalidateSize());
@@ -222,30 +233,71 @@ function filteredActivities(): Activity[] {
 
 function render(): void {
   const visible = filteredActivities();
+  if (selectedActivityId !== null && !visible.some((activity) => activity.id === selectedActivityId)) {
+    selectedActivityId = null;
+  }
   const stats = summarize(visible);
   setText('[data-stat="count"]', stats.count.toLocaleString());
   setText('[data-stat="distance"]', Math.round(stats.distance / 1000).toLocaleString());
   setText('[data-stat="time"]', formatDuration(stats.movingTime));
   setText('[data-stat="elevation"]', Math.round(stats.elevation).toLocaleString());
   element("count-badge").textContent = `${visible.length.toLocaleString()}件`;
-  element("activity-list").innerHTML = visible.slice(0, 100).map((activity) => `
-    <article class="activity-item">
+  renderActivityList(visible);
+  renderMap(visible, true);
+}
+
+function renderActivityList(visible: Activity[]): void {
+  const selected = visible.find((activity) => activity.id === selectedActivityId);
+  const listed = selected
+    ? [selected, ...visible.filter((activity) => activity.id !== selected.id).slice(0, 99)]
+    : visible.slice(0, 100);
+  activityList.innerHTML = listed.map((activity) => `
+    <button class="activity-item${activity.id === selectedActivityId ? " selected" : ""}" data-activity-id="${activity.id}" type="button">
       <div><strong>${escapeHtml(activity.name)}</strong><p>${escapeHtml(activity.sportType)} · ${(activity.distance / 1000).toFixed(1)} km · ${formatDuration(activity.movingTime)}</p></div>
       <time>${formatDate(activity.startDate)}</time>
-    </article>`).join("");
-  renderMap(visible, true);
+    </button>`).join("");
 }
 
 function renderMap(data: Activity[], fitBounds: boolean): void {
   if (!map) return;
   if (activityLayer) map.removeLayer(activityLayer);
-  const routes = data.map((activity) => decodePolyline(activity.polyline)).filter((points) => points.length > 1);
-  const points = routes.flatMap((route) => route.length > 300 ? route.filter((_, index) => index % 3 === 0) : route);
+  routeLayers.clear();
+  const routes = data
+    .map((activity) => ({ activity, points: decodePolyline(activity.polyline) }))
+    .filter((route) => route.points.length > 1);
+  const points = routes.flatMap((route) => route.points.length > 300 ? route.points.filter((_, index) => index % 3 === 0) : route.points);
   if (!points.length) return;
   activityLayer = mode === "heat"
     ? L.heatLayer(points.map(([lat, lng]) => [lat, lng, 1]), { radius: 13, blur: 18, minOpacity: 0.35, gradient: { 0.2: "#2563eb", 0.5: "#16a34a", 0.75: "#facc15", 1: "#f04b23" } }).addTo(map)
-    : L.layerGroup(routes.map((route) => L.polyline(route, { color: "#e44721", opacity: 0.3, weight: 2, interactive: false }))).addTo(map);
+    : L.layerGroup(routes.map(({ activity, points: route }) => {
+      const layer = L.polyline(route, routeStyle(activity.id));
+      layer.bindTooltip(escapeHtml(activity.name), { sticky: true });
+      layer.on("click", () => selectActivity(activity.id, true));
+      routeLayers.set(activity.id, layer);
+      return layer;
+    })).addTo(map);
+  updateRouteStyles();
   if (fitBounds) map.fitBounds(L.latLngBounds(points), { padding: [24, 24], maxZoom: 14 });
+}
+
+function selectActivity(id: number, revealInList: boolean): void {
+  selectedActivityId = id;
+  renderActivityList(filteredActivities());
+  updateRouteStyles();
+  if (revealInList) {
+    requestAnimationFrame(() => activityList.querySelector(".selected")?.scrollIntoView({ block: "nearest" }));
+  }
+}
+
+function updateRouteStyles(): void {
+  for (const [id, layer] of routeLayers) layer.setStyle(routeStyle(id));
+  if (selectedActivityId !== null) routeLayers.get(selectedActivityId)?.bringToFront();
+}
+
+function routeStyle(id: number): L.PolylineOptions {
+  return id === selectedActivityId
+    ? { color: "#1769e0", opacity: 0.65, weight: 4, interactive: true }
+    : { color: "#e44721", opacity: 0.3, weight: 2, interactive: true };
 }
 
 function exportJson(): void {

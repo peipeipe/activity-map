@@ -5,7 +5,7 @@ import { gunzipSync } from "fflate";
 import Papa from "papaparse";
 import { activityKind, parseActivityDate } from "./activity";
 import { extractFitPoints } from "./fit";
-import { encodePolyline, simplifyPoints, type Point } from "./polyline";
+import { encodePolyline, polylineDistance, simplifyPoints, type Point } from "./polyline";
 import type { Activity, ImportStats, WorkerMessage } from "./types";
 
 const MAX_ZIP_SIZE = 8 * 1024 ** 3;
@@ -140,12 +140,13 @@ function collectTrackPoints(value: unknown, points: Point[]): void {
 
 function buildActivity(row: CsvRow, points: Point[]): Activity {
   const sportType = row["Activity Type"] ?? "";
+  const distance = number(row["Distance.1"]) || polylineDistance(points) || number(row.Distance);
   return {
     id: number(row["Activity ID"]),
     name: row["Activity Name"] ?? "",
     sportType,
     kind: activityKind(sportType),
-    distance: number(row.Distance),
+    distance,
     movingTime: Math.round(number(row["Moving Time"])),
     elevation: number(row["Elevation Gain"]),
     startDate: parseActivityDate(row["Activity Date"] ?? ""),

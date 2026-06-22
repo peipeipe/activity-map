@@ -1,5 +1,25 @@
 export type Point = [number, number];
 
+const EARTH_RADIUS_METERS = 6_371_000;
+
+export function polylineDistance(points: Point[]): number {
+  let distance = 0;
+  for (let index = 1; index < points.length; index++) {
+    const [startLat, startLng] = points[index - 1];
+    const [endLat, endLng] = points[index];
+    const latDelta = radians(endLat - startLat);
+    const lngDelta = radians(endLng - startLng);
+    const haversine = Math.sin(latDelta / 2) ** 2
+      + Math.cos(radians(startLat)) * Math.cos(radians(endLat)) * Math.sin(lngDelta / 2) ** 2;
+    distance += 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(haversine));
+  }
+  return distance;
+}
+
+function radians(degrees: number): number {
+  return degrees * Math.PI / 180;
+}
+
 export function encodePolyline(points: Point[]): string {
   let previousLat = 0;
   let previousLng = 0;

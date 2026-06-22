@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { decodePolyline, encodePolyline, simplifyPoints, type Point } from "./polyline";
+import { decodePolyline, encodePolyline, polylineDistance, simplifyPoints, type Point } from "./polyline";
 
 describe("polyline", () => {
+  it("calculates the distance along GPS points in meters", () => {
+    expect(polylineDistance([[35, 139], [35.009, 139]])).toBeCloseTo(1001, -1);
+    expect(polylineDistance([])).toBe(0);
+  });
+
   it("matches the documented Google polyline example", () => {
     const points: Point[] = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];
     expect(encodePolyline(points)).toBe("_p~iF~ps|U_ulLnnqC_mqNvxq`@");
