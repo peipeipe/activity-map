@@ -3,7 +3,7 @@ import { BlobReader, BlobWriter, ZipReader, type Entry, type FileEntry } from "@
 import { XMLParser } from "fast-xml-parser";
 import { gunzipSync } from "fflate";
 import Papa from "papaparse";
-import { activityKind, parseActivityDate } from "./activity";
+import { activityDistanceMeters, activityKind, number, parseActivityDate } from "./activity";
 import { extractFitPoints } from "./fit";
 import { encodePolyline, polylineDistance, simplifyPoints, type Point } from "./polyline";
 import type { Activity, ImportStats, WorkerMessage } from "./types";
@@ -140,7 +140,7 @@ function collectTrackPoints(value: unknown, points: Point[]): void {
 
 function buildActivity(row: CsvRow, points: Point[]): Activity {
   const sportType = row["Activity Type"] ?? "";
-  const distance = number(row["Distance.1"]) || polylineDistance(points) || number(row.Distance);
+  const distance = activityDistanceMeters(row, polylineDistance(points));
   return {
     id: number(row["Activity ID"]),
     name: row["Activity Name"] ?? "",
@@ -161,11 +161,6 @@ async function readEntryText(entry: FileEntry): Promise<string> {
 
 function normalizePath(value: string): string {
   return value.replaceAll("\\", "/").replace(/^\.\//, "");
-}
-
-function number(value: string | undefined): number {
-  const parsed = Number.parseFloat(value ?? "");
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function post(message: WorkerMessage): void {

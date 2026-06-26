@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityKind, formatDuration, parseActivityDate, summarize } from "./activity";
+import { activityDistanceMeters, activityKind, formatDuration, number, parseActivityDate, summarize } from "./activity";
 import type { Activity } from "./types";
 
 describe("activity helpers", () => {
@@ -22,5 +22,20 @@ describe("activity helpers", () => {
     });
     expect(summarize([activity(1000), activity(2500)])).toEqual({ count: 2, distance: 3500, movingTime: 7200, elevation: 200 });
     expect(formatDuration(7260)).toBe("2h 1m");
+  });
+
+  it("reads the meter distance column from Strava exports", () => {
+    expect(activityDistanceMeters({ Distance_1: "10007.5", Distance: "10.00" }, 9999)).toBe(10007.5);
+    expect(activityDistanceMeters({ "Distance.1": "2500.0", Distance: "2.5" }, 0)).toBe(2500);
+  });
+
+  it("falls back to route distance before the display distance", () => {
+    expect(activityDistanceMeters({ Distance: "10.00" }, 10007.5)).toBe(10007.5);
+    expect(activityDistanceMeters({ Distance: "10.00" }, 0)).toBe(10000);
+  });
+
+  it("parses exported numbers with grouping separators", () => {
+    expect(number("1,234.5")).toBe(1234.5);
+    expect(number("")).toBe(0);
   });
 });

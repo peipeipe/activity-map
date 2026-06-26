@@ -1,5 +1,7 @@
 import type { Activity, ActivityKind } from "./types";
 
+type ExportRow = Record<string, string | undefined>;
+
 export function activityKind(sportType: string): ActivityKind {
   const sport = sportType.toLowerCase();
   if (sport.includes("run") || sport.includes("trail")) return "run";
@@ -42,4 +44,16 @@ export function parseActivityDate(value: string): string {
   let hour = Number(rawHour) % 12;
   if (period === "PM") hour += 12;
   return new Date(Date.UTC(Number(year), months.indexOf(month), Number(day), hour, Number(minute), Number(second))).toISOString();
+}
+
+export function activityDistanceMeters(row: ExportRow, routeDistanceMeters: number): number {
+  return number(row.Distance_1)
+    || number(row["Distance.1"])
+    || routeDistanceMeters
+    || number(row.Distance) * 1000;
+}
+
+export function number(value: string | undefined): number {
+  const parsed = Number.parseFloat((value ?? "").replaceAll(",", ""));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
