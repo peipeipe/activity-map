@@ -77,6 +77,11 @@ npm run build
 
 `dist/`だけで動作し、サーバー側の実行環境やデータベースは不要です。
 
+`main`ブランチへpushすると、GitHub Actionsがテスト、ビルド、Cloudflare Pagesへのデプロイを実行します。リポジトリのActions secretsに次の値を設定してください。
+
+- `CLOUDFLARE_API_TOKEN`: Cloudflare Pagesのデプロイ権限を持つAPIトークン
+- `CLOUDFLARE_ACCOUNT_ID`: CloudflareアカウントID
+
 WranglerでCloudflareへログイン済みの環境では、次のコマンドで本番デプロイできます。
 
 ```sh
