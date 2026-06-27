@@ -119,3 +119,16 @@ footer strong { color: #48566a; }
   .has-activities #map { height: 60dvh; min-height: 420px; }
   .has-activities .activity-list { max-height: 55dvh; }
 }
+.features, .faq { margin-bottom: 42px; }
+.feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.feature-grid article, .faq details { border: 1px solid #e0e6ef; border-radius: 18px; background: white; box-shadow: 0 8px 30px #29476b0b; }
+.feature-grid article { padding: 25px; }
+.feature-grid article > span { display: grid; width: 42px; height: 42px; margin-bottom: 14px; place-items: center; border-radius: 12px; background: #eaf3ff; font-size: 1.4rem; }
+.feature-grid h3 { margin: 0 0 10px; font-size: 1.08rem; }
+.feature-grid p, .faq p { margin: 0; color: #68758a; font-size: .92rem; line-height: 1.75; }
+.faq { max-width: 920px; margin-right: auto; margin-left: auto; }
+.faq details { padding: 0 22px; }
+.faq details + details { margin-top: 12px; }
+.faq summary { cursor: pointer; padding: 18px 0; font-weight: 750; }
+.faq details[open] { padding-bottom: 18px; }
+@media (max-width: 850px) { .feature-grid { grid-template-columns: 1fr; } }
