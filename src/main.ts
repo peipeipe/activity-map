@@ -16,7 +16,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
       <div>
         <p class="eyebrow">STRAVA ACTIVITY VIEWER</p>
         <h1>これまでの運動を、<br><span>ひとつの地図に。</span></h1>
-        <p class="lead">Stravaの記録を読み込むだけで、走った道や走行距離を地図で振り返れます。</p>
+        <p class="lead">Stravaの記録を読み込むだけで、ランニング・ライド・ウォーキングの軌跡や走行距離を地図で振り返れます。</p>
       </div>
       <div class="hero-visual" aria-hidden="true">
         <span class="route-dot dot-one"></span><span class="route-dot dot-two"></span><span class="route-dot dot-three"></span>
@@ -33,6 +33,22 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <li><span class="step-number">2</span><div><strong>メールが届くまで待つ</strong><p>準備が完了するとStravaからメールが届きます。メール内のリンクからZIPをダウンロードします。</p><small>通常、数日かかります</small></div></li>
         <li><span class="step-number">3</span><div><strong>ZIPを読み込む</strong><p>ダウンロードしたZIPを展開せず、そのまま下のボタンから選択します。</p></div></li>
       </ol>
+    </section>
+
+    <section class="features landing-only" aria-labelledby="features-title">
+      <div class="section-heading"><p>FEATURES</p><h2 id="features-title">Stravaの思い出を安全に見える化</h2><span>Activity Mapは、過去のアクティビティを「地図で探す」「傾向を見る」「端末に残す」ための無料Webアプリです。</span></div>
+      <div class="feature-grid">
+        <article><span aria-hidden="true">🗺️</span><h3>走った道を一枚の地図に</h3><p>FITやGPXに含まれるルートを読み込み、ランニング、ライド、ウォーキングなどの軌跡をまとめて表示できます。</p></article>
+        <article><span aria-hidden="true">🔥</span><h3>ヒートマップでお気に入りコースを発見</h3><p>よく通る道をヒート表示に切り替えられるので、日々の練習エリアや旅先の記録を直感的に振り返れます。</p></article>
+        <article><span aria-hidden="true">🔒</span><h3>Strava ZIPをアップロードしない設計</h3><p>アーカイブの解析はブラウザ内で完結します。保存も明示的に選んだときだけ端末内に行います。</p></article>
+      </div>
+    </section>
+
+    <section class="faq landing-only" aria-labelledby="faq-title">
+      <div class="section-heading"><p>FAQ</p><h2 id="faq-title">よくある質問</h2></div>
+      <details><summary>Activity Mapは無料で使えますか？</summary><p>はい。ブラウザで開いて、Stravaから取得したZIPファイルを選択するだけで利用できます。</p></details>
+      <details><summary>Stravaのデータはサーバーに送信されますか？</summary><p>いいえ。ZIPの解析は端末のブラウザ内で行います。地図表示時のみ、地図タイル取得の通信が発生します。</p></details>
+      <details><summary>どんなアクティビティを表示できますか？</summary><p>Stravaエクスポート内のFITまたはGPXからGPSルートを抽出し、ラン、ライド、ウォーク、その他の種目に分けて表示します。</p></details>
     </section>
 
     <section class="import-card" id="import-card">
