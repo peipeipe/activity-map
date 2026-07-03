@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityDistanceMeters, activityKind, exportField, formatDuration, number, parseActivityDate, summarize } from "./activity";
+import { activityDistanceMeters, activityKind, exportField, formatDuration, formatElevation, number, parseActivityDate, summarize } from "./activity";
 import type { Activity } from "./types";
 
 describe("activity helpers", () => {
@@ -28,6 +28,7 @@ describe("activity helpers", () => {
     });
     expect(summarize([activity(1000), activity(2500)])).toEqual({ count: 2, distance: 3500, movingTime: 7200, elevation: 200 });
     expect(formatDuration(7260)).toBe("2h 1m");
+    expect(formatElevation(1234.5)).toBe("1,235 m");
   });
 
   it("reads the meter distance column from Strava exports", () => {

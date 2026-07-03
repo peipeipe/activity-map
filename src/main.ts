@@ -2,7 +2,7 @@ import L, { type Layer } from "leaflet";
 import "leaflet.heat";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
-import { formatDate, formatDuration, summarize } from "./activity";
+import { formatDate, formatDuration, formatElevation, summarize } from "./activity";
 import { decodePolyline } from "./polyline";
 import { clearActivities, loadActivities, saveActivities } from "./storage";
 import type { Activity, ActivityKind, WorkerMessage } from "./types";
@@ -239,8 +239,16 @@ function initializeMap(): void {
   const gsi = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
     attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>', minZoom: 5, maxZoom: 18,
   });
+  const gsiShaded = L.layerGroup([
+    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png", {
+      attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>', minZoom: 5, maxZoom: 18,
+    }),
+    L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png", {
+      attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>', minZoom: 5, maxZoom: 18, maxNativeZoom: 16, opacity: 0.28,
+    }),
+  ]);
   carto.addTo(map);
-  L.control.layers({ "CARTO Light": carto, "地理院地図": gsi }).addTo(map);
+  L.control.layers({ "CARTO Light": carto, "地理院地図": gsi, "地理院地図（陰影）": gsiShaded }).addTo(map);
 }
 
 function filteredActivities(): Activity[] {
@@ -269,7 +277,7 @@ function renderActivityList(visible: Activity[]): void {
     : visible.slice(0, 100);
   activityList.innerHTML = listed.map((activity) => `
     <button class="activity-item${activity.id === selectedActivityId ? " selected" : ""}" data-activity-id="${activity.id}" type="button">
-      <div><strong>${escapeHtml(activity.name)}</strong><p>${escapeHtml(activity.sportType)} · ${(activity.distance / 1000).toFixed(1)} km · ${formatDuration(activity.movingTime)}</p></div>
+      <div><strong>${escapeHtml(activity.name)}</strong><p>${escapeHtml(activity.sportType)} · ${(activity.distance / 1000).toFixed(1)} km · ${formatDuration(activity.movingTime)} · ${formatElevation(activity.elevation)} up</p></div>
       <time>${formatDate(activity.startDate)}</time>
     </button>`).join("");
 }
@@ -312,8 +320,8 @@ function updateRouteStyles(): void {
 
 function routeStyle(id: number): L.PolylineOptions {
   return id === selectedActivityId
-    ? { color: "#1769e0", opacity: 0.65, weight: 4, interactive: true }
-    : { color: "#e44721", opacity: 0.3, weight: 2, interactive: true };
+    ? { color: "#e44721", opacity: 0.7, weight: 4, interactive: true }
+    : { color: "#1769e0", opacity: 0.3, weight: 2, interactive: true };
 }
 
 function exportJson(): void {

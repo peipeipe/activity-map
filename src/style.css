@@ -45,8 +45,9 @@ aside { min-width: 0; }
 .list-heading span { color: #777; font-size: .85rem; }
 .activity-list { max-height: 540px; overflow: auto; }
 .activity-item { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 18px; border: 0; border-bottom: 1px solid #efeee9; color: inherit; background: white; text-align: left; }
+.activity-item > div { min-width: 0; }
 .activity-item:hover { background: #f7faff; }
-.activity-item.selected { box-shadow: inset 4px 0 #1769e0; background: #edf5ff; }
+.activity-item.selected { box-shadow: inset 4px 0 #e44721; background: #fff1ec; }
 .activity-item strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .activity-item p { margin: 4px 0 0; color: #747a75; font-size: .82rem; }
 .activity-item time { flex: none; color: #8a8f8b; font-size: .78rem; }

@@ -29,6 +29,10 @@ export function formatDuration(seconds: number): string {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
+export function formatElevation(meters: number): string {
+  return `${Math.round(meters).toLocaleString()} m`;
+}
+
 export function formatDate(value: string): string {
   if (!value) return "";
   const date = new Date(value);
