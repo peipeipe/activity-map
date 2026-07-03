@@ -33,6 +33,18 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Ensure production branch
+        run: |
+          curl --fail --silent --show-error --request PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/activity-map" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data '{"production_branch":"main"}' \
+            --output /dev/null
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy
         run: npx wrangler pages deploy dist --project-name activity-map --branch main
         env:
