@@ -3,7 +3,7 @@ import { BlobReader, BlobWriter, ZipReader, type Entry, type FileEntry } from "@
 import { XMLParser } from "fast-xml-parser";
 import { gunzipSync } from "fflate";
 import Papa from "papaparse";
-import { activityDistanceMeters, activityKind, number, parseActivityDate } from "./activity";
+import { activityDistanceMeters, activityKind, exportField, number, parseActivityDate } from "./activity";
 import { extractFitPoints } from "./fit";
 import { encodePolyline, polylineDistance, simplifyPoints, type Point } from "./polyline";
 import type { Activity, ImportStats, WorkerMessage } from "./types";
@@ -16,18 +16,20 @@ const MAX_CSV_SIZE = 64 * 1024 ** 2;
 
 type CsvRow = Record<string, string>;
 
-self.onmessage = async (event: MessageEvent<{ file: File }>) => {
-  try {
-    const { file } = event.data;
-    if (file.size > MAX_ZIP_SIZE) throw new Error("ZIPは8GB以下にしてください");
-    const result = await importArchive(file);
-    post({ type: "complete", ...result });
-  } catch (error) {
-    post({ type: "error", message: error instanceof Error ? error.message : "解析に失敗しました" });
-  }
-};
+if (typeof self !== "undefined") {
+  self.onmessage = async (event: MessageEvent<{ file: File }>) => {
+    try {
+      const { file } = event.data;
+      if (file.size > MAX_ZIP_SIZE) throw new Error("ZIPは8GB以下にしてください");
+      const result = await importArchive(file);
+      post({ type: "complete", ...result });
+    } catch (error) {
+      post({ type: "error", message: error instanceof Error ? error.message : "解析に失敗しました" });
+    }
+  };
+}
 
-async function importArchive(file: File): Promise<{ activities: Activity[]; stats: ImportStats }> {
+export async function importArchive(file: File): Promise<{ activities: Activity[]; stats: ImportStats }> {
   const reader = new ZipReader(new BlobReader(file));
   try {
     post({ type: "progress", current: 0, total: 1, label: "ZIPの内容を確認中" });
@@ -48,7 +50,7 @@ async function importArchive(file: File): Promise<{ activities: Activity[]; stat
 
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
-      const filename = normalizePath(row.Filename ?? "");
+      const filename = normalizePath(exportField(row, ["Filename", "ファイル名"]) ?? "");
       if (!filename || !byName.has(filename)) {
         stats.withoutFile++;
         continue;
@@ -66,7 +68,7 @@ async function importArchive(file: File): Promise<{ activities: Activity[]; stat
         activities.push(buildActivity(row, points));
         stats.imported++;
       } catch (error) {
-        console.warn(`Activity ${row["Activity ID"] ?? index} failed`, error);
+        console.warn(`Activity ${exportField(row, ["Activity ID", "アクティビティID"]) ?? index} failed`, error);
         stats.failed++;
       }
       if (index % 10 === 0 || index === rows.length - 1) {
@@ -139,17 +141,17 @@ function collectTrackPoints(value: unknown, points: Point[]): void {
 }
 
 function buildActivity(row: CsvRow, points: Point[]): Activity {
-  const sportType = row["Activity Type"] ?? "";
+  const sportType = exportField(row, ["Activity Type", "アクティビティタイプ", "タイプ"]) ?? "";
   const distance = activityDistanceMeters(row, polylineDistance(points));
   return {
-    id: number(row["Activity ID"]),
-    name: row["Activity Name"] ?? "",
+    id: number(exportField(row, ["Activity ID", "アクティビティID"])),
+    name: exportField(row, ["Activity Name", "アクティビティ名"]) ?? "",
     sportType,
     kind: activityKind(sportType),
     distance,
-    movingTime: Math.round(number(row["Moving Time"])),
-    elevation: number(row["Elevation Gain"]),
-    startDate: parseActivityDate(row["Activity Date"] ?? ""),
+    movingTime: Math.round(number(exportField(row, ["Moving Time", "移動時間"]))),
+    elevation: number(exportField(row, ["Elevation Gain", "獲得標高"])),
+    startDate: parseActivityDate(exportField(row, ["Activity Date", "アクティビティ実行日", "開始時間"]) ?? ""),
     polyline: encodePolyline(simplifyPoints(points, 10)),
   };
 }
@@ -164,5 +166,5 @@ function normalizePath(value: string): string {
 }
 
 function post(message: WorkerMessage): void {
-  self.postMessage(message);
+  if (typeof self !== "undefined") self.postMessage(message);
 }
