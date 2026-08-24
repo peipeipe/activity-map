@@ -14,6 +14,7 @@ ZIPや位置情報はアプリのサーバーへアップロードしません�
 - `activities.csv` と `FIT / FIT.GZ / GPX / GPX.GZ` をWeb Workerで解析
 - 全アクティビティの軌跡線またはヒートマップを表示
 - Run、Ride、Walk、Otherで絞り込み
+- 距離、平均速度、名前、タイプをSQL風の条件式で検索
 - 件数、距離、移動時間、獲得標高を集計
 - 最近のアクティビティを一覧表示
 - 解析結果を明示操作でIndexedDBへ保存
@@ -51,7 +52,10 @@ ZIPや位置情報はアプリのサーバーへアップロードしません�
 - `src/fit.ts`: GPS点列に必要なFIT record messageの解析
 - `src/polyline.ts`: 点列簡略化とGoogle Polyline形式の変換
 - `src/main.ts`: UI、地図、フィルター、統計、JSON書き出し
+- `src/activity-query.ts`: SQL風検索の字句解析、構文解析、条件評価
 - `src/storage.ts`: IndexedDBへの明示保存
+
+SQL風検索では、たとえば `distance >= 10 AND speed > 12`、`name CONTAINS '朝'`、`type = 'run'` のように入力できます。距離はkm、速度は移動時間から算出した平均km/hです。`SELECT * FROM activities WHERE ...` の形式にも対応しています。
 
 ## Development
 

@@ -3,6 +3,7 @@ import "leaflet.heat";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import { formatDate, formatDuration, formatElevation, summarize } from "./activity";
+import { compileActivityQuery } from "./activity-query";
 import { decodePolyline } from "./polyline";
 import { clearActivities, loadActivities, saveActivities } from "./storage";
 import type { Activity, ActivityKind, WorkerMessage } from "./types";
@@ -89,6 +90,15 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
         <div class="map-wrap"><div id="map"></div></div>
         <aside>
           <div class="list-heading"><h2>アクティビティ</h2><span id="count-badge"></span></div>
+          <form class="query-search" id="query-form">
+            <label for="query-input">SQL風検索</label>
+            <div class="query-controls">
+              <input id="query-input" type="search" placeholder="distance >= 10 AND type = 'run'" autocomplete="off" spellcheck="false" />
+              <button type="submit">検索</button>
+            </div>
+            <p class="query-help"><code>distance</code> km・<code>speed</code> km/h・<code>name</code>・<code>type</code> ／ <code>AND</code> <code>OR</code> <code>NOT</code> <code>CONTAINS</code> <code>LIKE</code></p>
+            <p class="query-error" id="query-error" role="alert" hidden></p>
+          </form>
           <div class="activity-list" id="activity-list"></div>
         </aside>
       </div>
@@ -105,6 +115,8 @@ let worker: Worker | null = null;
 let map: L.Map | null = null;
 let activityLayer: Layer | null = null;
 let selectedActivityId: number | null = null;
+let activityPredicate = compileActivityQuery("");
+let activityListLimit = 100;
 const routeLayers = new Map<number, L.Polyline>();
 
 const input = element<HTMLInputElement>("zip-input");
@@ -115,6 +127,8 @@ const progressLabel = element<HTMLElement>("progress-label");
 const progressPercent = element<HTMLElement>("progress-percent");
 const errorBox = element<HTMLElement>("error");
 const activityList = element<HTMLDivElement>("activity-list");
+const queryInput = element<HTMLInputElement>("query-input");
+const queryError = element<HTMLElement>("query-error");
 
 element("choose-button").addEventListener("click", () => input.click());
 input.addEventListener("change", () => input.files?.[0] && beginImport(input.files[0]));
@@ -128,13 +142,27 @@ dropZone.addEventListener("drop", (event) => {
   if (file) beginImport(file);
 });
 activityList.addEventListener("click", (event) => {
+  const loadMore = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-load-more]");
+  if (loadMore) {
+    activityListLimit += 100;
+    renderActivityList(filteredActivities());
+    return;
+  }
   const item = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-activity-id]");
   if (item) selectActivity(Number(item.dataset.activityId), false);
+});
+element<HTMLFormElement>("query-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  applyActivityQuery();
+});
+queryInput.addEventListener("search", () => {
+  if (!queryInput.value) applyActivityQuery();
 });
 
 document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((button) => button.addEventListener("click", () => {
   setActive("[data-filter]", button);
   filter = (button.dataset.filter ?? "all") as Filter;
+  activityListLimit = 100;
   render();
 }));
 document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => button.addEventListener("click", () => {
@@ -252,7 +280,21 @@ function initializeMap(): void {
 }
 
 function filteredActivities(): Activity[] {
-  return filter === "all" ? activities : activities.filter((activity) => activity.kind === filter);
+  return activities.filter((activity) => (filter === "all" || activity.kind === filter) && activityPredicate(activity));
+}
+
+function applyActivityQuery(): void {
+  try {
+    activityPredicate = compileActivityQuery(queryInput.value.trim());
+    queryError.hidden = true;
+    queryError.textContent = "";
+    selectedActivityId = null;
+    activityListLimit = 100;
+    render();
+  } catch (error) {
+    queryError.textContent = error instanceof Error ? error.message : "検索条件を解釈できません";
+    queryError.hidden = false;
+  }
 }
 
 function render(): void {
@@ -271,15 +313,28 @@ function render(): void {
 }
 
 function renderActivityList(visible: Activity[]): void {
+  if (!visible.length) {
+    activityList.innerHTML = '<p class="empty-list">条件に一致するアクティビティはありません</p>';
+    return;
+  }
   const selected = visible.find((activity) => activity.id === selectedActivityId);
-  const listed = selected
-    ? [selected, ...visible.filter((activity) => activity.id !== selected.id).slice(0, 99)]
-    : visible.slice(0, 100);
+  const firstPage = visible.slice(0, activityListLimit);
+  const listed = selected && !firstPage.includes(selected)
+    ? [selected, ...firstPage.slice(0, -1)]
+    : firstPage;
+  const remaining = visible.length - listed.length;
   activityList.innerHTML = listed.map((activity) => `
     <button class="activity-item${activity.id === selectedActivityId ? " selected" : ""}" data-activity-id="${activity.id}" type="button">
-      <div><strong>${escapeHtml(activity.name)}</strong><p>${escapeHtml(activity.sportType)} · ${(activity.distance / 1000).toFixed(1)} km · ${formatDuration(activity.movingTime)} · ${formatElevation(activity.elevation)} up</p></div>
+      <div><strong>${escapeHtml(activity.name)}</strong><p>${escapeHtml(activity.sportType)} · ${(activity.distance / 1000).toFixed(1)} km · ${formatSpeed(activity)} · ${formatDuration(activity.movingTime)} · ${formatElevation(activity.elevation)} up</p></div>
       <time>${formatDate(activity.startDate)}</time>
-    </button>`).join("");
+    </button>`).join("") + (remaining > 0
+    ? `<button class="load-more" data-load-more type="button">さらに表示（残り${remaining.toLocaleString()}件）</button>`
+    : "");
+}
+
+function formatSpeed(activity: Activity): string {
+  const speed = activity.movingTime > 0 ? (activity.distance / 1000) / (activity.movingTime / 3600) : 0;
+  return `${speed.toFixed(1)} km/h`;
 }
 
 function renderMap(data: Activity[], fitBounds: boolean): void {
